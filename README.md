@@ -25,7 +25,7 @@ An offline voice assistant application designed for Android users, built using F
    git clone https://github.com/Mahery19/Offline_Assistant.git
    ```
 
-([github.com][1])
+
 
 2. Navigate to the project directory:
 
@@ -49,7 +49,7 @@ An offline voice assistant application designed for Android users, built using F
    flutter run
    ```
 
-([github.com][1])
+
 
 ## Usage
 
