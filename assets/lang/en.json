@@ -1,0 +1,18 @@
+{
+  "hello": "Hello!",
+  "settings": "Settings",
+  "language": "Language",
+  "theme": "Theme",
+  "about": "About",
+  "help": "Help",
+  "dark": "Dark",
+  "light": "Light",
+  "rate": "Rate App",
+  "contact": "Contact",
+  "ok": "OK",
+  "features": "Features",
+  "how_to_use": "How to Use",
+  "developer": "Developer",
+  "change_language": "Change Language",
+  "choose_theme": "Choose Theme"
+}

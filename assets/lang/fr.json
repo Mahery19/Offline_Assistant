@@ -1,0 +1,18 @@
+{
+  "hello": "Bonjour!",
+  "settings": "Paramètres",
+  "language": "Langue",
+  "theme": "Thème",
+  "about": "À propos",
+  "help": "Aide",
+  "dark": "Sombre",
+  "light": "Clair",
+  "rate": "Noter l'application",
+  "contact": "Contact",
+  "ok": "OK",
+  "features": "Fonctionnalités",
+  "how_to_use": "Comment utiliser",
+  "developer": "Développeur",
+  "change_language": "Changer de langue",
+  "choose_theme": "Choisir le thème"
+}
