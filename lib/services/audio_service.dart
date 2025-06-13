@@ -1,4 +1,5 @@
 import 'package:just_audio/just_audio.dart';
+import 'dart:io';
 
 class AudioService {
   static final _player = AudioPlayer();
@@ -79,5 +80,22 @@ class AudioService {
 
   static String _fileName(String path) {
     return path.split('/').last;
+  }
+
+  /// NEW: Play all music files in a directory
+  static Future<String> playAllMusicInDirectory(String dirPath) async {
+    final dir = Directory(dirPath);
+    if (!await dir.exists()) return "Music folder not found.";
+    List<String> files = [];
+    await for (var entity in dir.list(recursive: true, followLinks: false)) {
+      if (entity is File) {
+        final ext = entity.path.split('.').last.toLowerCase();
+        if (['mp3', 'wav', 'aac', 'm4a', 'ogg'].contains(ext)) {
+          files.add(entity.path);
+        }
+      }
+    }
+    if (files.isEmpty) return "No music files found.";
+    return await playPlaylist(files);
   }
 }

@@ -25,6 +25,9 @@ class VoiceAssistantApp extends StatelessWidget {
 }
 */
 
+import 'package:apptest/personalization_provider.dart';
+import 'package:apptest/services/custom_command_provider.dart';
+import 'package:apptest/services/mode_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
@@ -47,6 +50,9 @@ void main() async {
         providers: [
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => BackgroundListenProvider()),
+          ChangeNotifierProvider(create: (_) => PersonalizationProvider()),
+          ChangeNotifierProvider(create: (_) => CustomCommandProvider()),
+          ChangeNotifierProvider(create: (_) => ModeProvider()),
         ],
         child: const MyApp(),
       ),

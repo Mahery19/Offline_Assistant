@@ -194,6 +194,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:provider/provider.dart';
+import '../models/interaction.dart';
+import '../personalization_provider.dart';
+import '../services/chatbot_engine.dart';
+import '../services/mode_provider.dart';
 import '../services/speech_service.dart';
 import '../services/tts_service.dart';
 import '../actions/action_handler.dart';
@@ -206,9 +211,12 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+bool _isChatBotMode = false; // NEW: mode toggle
+List<Interaction> _chatHistory = [];
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final SpeechService _speechService = SpeechService();
   final TTSService _ttsService = TTSService();
+
 
   bool _isListening = false;
   String _recognizedText = 'Tap mic and speak';
@@ -223,10 +231,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _onResult(String text, bool isFinal) async {
     setState(() => _recognizedText = text);
     if (isFinal) {
-      // Only process when speech is finished
-      String response = await ActionHandler.handleCommand(text);
+      final isChatBotMode = Provider.of<ModeProvider>(context, listen: false).isChatBotMode;
+      String response;
+      if (isChatBotMode) {
+        response = await ChatBotEngine.getReply(text);
+      } else {
+        final personalization = Provider.of<PersonalizationProvider>(context, listen: false);
+        response = await ActionHandler.handleCommand(text, personalization);
+      }
       await _ttsService.speak(response);
-      setState(() => _recognizedText = '$text\n\nAssistant: $response');
+      setState(() {
+        _chatHistory.add(Interaction(text, response));
+        _recognizedText = '';
+      });
     }
   }
 
@@ -247,7 +264,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final modeProvider = Provider.of<ModeProvider>(context);
+    // Only clear if mode just changed!
+    if (_lastMode != modeProvider.isChatBotMode) {
+      setState(() {
+        _chatHistory.clear();
+        _lastMode = modeProvider.isChatBotMode;
+      });
+    }
+  }
+  bool _lastMode = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isChatBotMode = Provider.of<ModeProvider>(context).isChatBotMode;
     return Scaffold(
       appBar: AppBar(
         title: Text('Offline Assistant').tr(),
@@ -261,35 +293,101 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               isScrollControlled: true,
               builder: (ctx) => const SettingsSheet(),
             ),
-          )
+          ),
+          /*Row(
+            children: [
+              const Text("Assistant"),
+              Switch(
+                value: _isChatBotMode,
+                onChanged: (val) => setState(() => _isChatBotMode = val),
+              ),
+              const Text("Chatbot"),
+            ],
+          ),*/
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _recognizedText,
-              style: const TextStyle(fontSize: 24),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            IconButton(
-              icon: Icon(_isListening ? Icons.hearing : Icons.mic),
-              iconSize: 48,
-              color: _isListening ? Colors.green : null,
-              onPressed: _listen,
-            ),
-            if (_isListening)
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  "Listening...",
-                  style: TextStyle(color: Colors.green),
-                ),
+      body: Column(
+        children: [
+          // Optional: Show banner for Chatbot mode
+          if (_isChatBotMode)
+            Container(
+              width: double.infinity,
+              color: Colors.purple[50],
+              padding: const EdgeInsets.all(8),
+              child: const Text(
+                "Chatbot mode: Your virtual friend is here!",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.purple),
               ),
-          ],
-        ),
+            ),
+
+          // Chat history
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              itemCount: _chatHistory.length,
+              itemBuilder: (context, index) {
+                final item = _chatHistory[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("You: ${item.userText}",
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 3),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.purple,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(_isChatBotMode
+                            ? "Friend: ${item.assistantResponse}"
+                            : "Assistant: ${item.assistantResponse}"),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Current recognition text (if you want to show it live)
+          if (_recognizedText.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                _recognizedText,
+                style: const TextStyle(fontSize: 18, fontStyle: FontStyle.italic),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+          // Mic Button at the bottom
+          Padding(
+            padding: const EdgeInsets.only(bottom: 32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(_isListening ? Icons.hearing : Icons.mic),
+                  iconSize: 48,
+                  color: _isListening ? Colors.green : null,
+                  onPressed: _listen,
+                ),
+                if (_isListening)
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text(
+                      "Listening...",
+                      style: TextStyle(color: Colors.green),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

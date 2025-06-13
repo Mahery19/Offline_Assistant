@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'dart:math';
+import 'package:flutter/services.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:provider/provider.dart';
 
+import '../personalization_provider.dart';
 import '../services/flashlight_service.dart';
 import '../services/app_launcher_service.dart';
 import '../services/alarm_service.dart';
@@ -14,6 +18,7 @@ import '../services/audio_service.dart';
 // import '../services/app_launcher_service.dart';
 import '../services/web_service.dart';
 // import '../services/device_info_service.dart';
+import '../services/notes_service.dart';
 
 
 // Map spoken app names to package names
@@ -32,13 +37,32 @@ const Map<String, String> appPackages = {
 };
 
 class ActionHandler {
-  static Future<String> handleCommand(String input) async {
+  static Future<String> handleCommand(String input, PersonalizationProvider personalization) async {
     final alarmRegex = RegExp(r'set alarm (for )?(at )?(\d{1,2})(:| )?(\d{2})?');
     final lower = input.toLowerCase();
+
+
+    if (lower.contains('hello') || (lower.contains('hi'))) {
+    return 'Hello! I am ${personalization.assistantName}. How can I help you?';
+    }
+    if (lower.contains('your name')) {
+    return "My name is ${personalization.assistantName}!";
+    }
+
+
 
     /*if (lower.contains('device info') || lower.contains('system info') || lower.contains('storage') || lower.contains('ram')) {
       return await DeviceInfoService.getDeviceInfo();
     }*/
+
+    // "note: [text]"
+    if (lower.startsWith('note')) {
+      final note = lower.replaceFirst('note:', '').trim();
+      return await NotesService.addNote(note);
+    }
+    if (lower.contains('read my notes')) {
+      return await NotesService.readNotes();
+    }
 
     // "open [website]"
     final webRegex = RegExp(r'open (.+\.[a-z]{2,})(\/\S*)?');
@@ -52,9 +76,9 @@ class ActionHandler {
 
     // Play local song: "play song" or "play music"
     if (lower.startsWith('play song') || lower.startsWith('play music')) {
-      // Example path, change as needed:
-      const songPath = '/storage/emulated/0/Music/Malagasy_music/zandry_hamed.mp3'; // or .mp4
-      return await AudioService.playLocalFile(songPath);
+      // Play all music in the default music directory
+      const musicDir = '/storage/emulated/0/Music';
+      return await AudioService.playAllMusicInDirectory(musicDir);
     }
 
     // Play YouTube video: "play youtube [query or URL]"
@@ -103,10 +127,10 @@ class ActionHandler {
     }
 
     // Wi-Fi commands
-    if (lower.contains('turn on Wi-Fi') || lower.contains('enable Wi-Fi')) {
+    if (input.contains('Turn on Wi-Fi') || input.contains('Enable Wi-Fi')) {
       return await DeviceControlService.setWifi(true);
     }
-    if (lower.contains('turn off Wi-Fi') || lower.contains('disable Wi-Fi')) {
+    if (input.contains('Turn off Wi-Fi') || input.contains('Disable Wi-Fi')) {
       return await DeviceControlService.setWifi(false);
     }
 
@@ -139,11 +163,11 @@ class ActionHandler {
     }
 
     // "send sms to [name or number] [message]"
-    final smsNameRegex = RegExp(r'send sms to ([a-zA-Z0-9 ]+) (.+)');
-    if (smsNameRegex.hasMatch(lower)) {
-      final match = smsNameRegex.firstMatch(lower)!;
+    final smsNameRegex = RegExp(r'Send SMS to (.+?) (.+)', caseSensitive: false);
+    if (smsNameRegex.hasMatch(input)) {
+      final match = smsNameRegex.firstMatch(input)!;
       final to = match.group(1)!.trim();
-      final message = match.group(2)!;
+      final message = match.group(2)!.trim();
       if (RegExp(r'^\d+$').hasMatch(to)) {
         return await PhoneService.sendSMS(phone: to, message: message);
       } else {
@@ -182,9 +206,9 @@ class ActionHandler {
       return await NotificationService.scheduleReminder(message: task, dateTime: reminderTime);
     }
 
-    if (lower.contains('hello') || (lower.contains('hi'))) {
+    /*if (lower.contains('hello') || (lower.contains('hi'))) {
       return 'Hello! How can I help you?';
-    } else if (lower.contains('time')) {
+    } else*/ if (lower.contains('time')) {
       final now = DateTime.now();
       return 'Current time is ${now.hour}:${now.minute.toString().padLeft(2, '0')}';
     } else if (lower.contains('date')) {
@@ -193,6 +217,14 @@ class ActionHandler {
     } else if (lower.contains('your name')) {
       return "I'm your personal voice assistant!";
     } else if (lower.contains('bye')) {
+      // Delay to let TTS finish speaking (optional, e.g. 1 second)
+      Future.delayed(const Duration(seconds: 1), () {
+        if (Platform.isAndroid) {
+          SystemNavigator.pop();
+        } else {
+          exit(0);
+        }
+      });
       return 'Goodbye!';
     } else if (lower.contains('f*** you')) {
       return 'Fuck you too , mother fucker!';

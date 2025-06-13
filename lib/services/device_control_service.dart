@@ -4,13 +4,17 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 
 class DeviceControlService {
-  // Wi-Fi
+  // Wi-Fi (now matches Bluetooth/Airplane mode approach)
   static Future<String> setWifi(bool enable) async {
     try {
-      await WiFiForIoTPlugin.setEnabled(enable, shouldOpenSettings: false);
-      return 'Wi-Fi turned ${enable ? "on" : "off"}.';
+      final intent = AndroidIntent(
+        action: 'android.settings.WIFI_SETTINGS',
+        flags: <int>[Flag.FLAG_ACTIVITY_NEW_TASK],
+      );
+      await intent.launch();
+      return 'Opening Wi-Fi settings. Please turn Wi-Fi ${enable ? "on" : "off"} manually.';
     } catch (e) {
-      return "Couldn't change Wi-Fi state.";
+      return "Couldn't open Wi-Fi settings.";
     }
   }
 
