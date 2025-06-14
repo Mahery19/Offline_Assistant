@@ -118,7 +118,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ---
 
 **Enjoy your personal Offline Assistant!**
-
----
-
-**Let me know if you want a section about troubleshooting, FAQ, screenshots, or usage videos added!**
